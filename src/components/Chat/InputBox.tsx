@@ -30,28 +30,29 @@ export function InputBox({ onSend, disabled = false }: InputBoxProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && e.ctrlKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
       handleSend();
     }
   };
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
-      <div className="flex gap-3">
+    <div className="border-t border-white/40 bg-white/70 px-6 py-5 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <textarea
           ref={textareaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type your message... (Ctrl+Enter to send)"
+          placeholder="Type your message... (Shift+Enter for newline)"
           disabled={disabled}
-          className="flex-1 resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="scrollbar-hide flex-1 resize-none rounded-2xl border border-white/40 bg-white/80 px-4 py-3 text-gray-900 shadow-inner transition-all duration-300 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-900/70 dark:text-gray-100 dark:placeholder-gray-500"
           rows={1}
         />
         <button
           onClick={handleSend}
           disabled={!input.trim() || disabled}
-          className="btn-primary h-12 w-12 flex items-center justify-center"
+          className="btn-primary flex h-12 w-full items-center justify-center gap-2 text-sm font-semibold uppercase tracking-wide sm:w-36"
           title="Send message"
         >
           <Send size={20} />

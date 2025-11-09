@@ -67,11 +67,30 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   },
 
   deleteConversation: (id) => {
-    set((state) => ({
-      conversations: state.conversations.filter((c) => c.id !== id),
-      currentConversationId:
-        state.currentConversationId === id ? null : state.currentConversationId,
-    }));
+    set((state) => {
+      const remaining = state.conversations.filter((c) => c.id !== id);
+      const nextId =
+        state.currentConversationId === id
+          ? remaining[0]?.id ?? null
+          : state.currentConversationId;
+
+      return {
+        conversations: remaining,
+        currentConversationId: nextId,
+      };
+    });
+
+    const { conversations, currentConversationId, createConversation } = get();
+
+    if (conversations.length === 0) {
+      createConversation();
+      return;
+    }
+
+    if (!currentConversationId) {
+      set({ currentConversationId: conversations[0].id });
+    }
+
     get().saveToStorage();
   },
 
@@ -117,6 +136,17 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
           currentConversationId: data.currentConversationId,
           theme: data.theme || "dark",
         });
+
+        const state = get();
+        const hasCurrent = state.conversations.some(
+          (conversation) => conversation.id === state.currentConversationId
+        );
+
+        if (state.conversations.length === 0) {
+          state.createConversation();
+        } else if (!hasCurrent) {
+          set({ currentConversationId: state.conversations[0].id });
+        }
 
         // Apply theme
         if (data.theme === "dark") {

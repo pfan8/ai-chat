@@ -10,22 +10,29 @@ export function Message({ message }: MessageProps) {
 
   return (
     <div
-      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4 animate-slide-up`}
+      className={`flex ${isUser ? "justify-end" : "justify-start"} animate-slide-up`}
     >
       <div
-        className={`max-w-xs lg:max-w-2xl px-4 py-3 rounded-2xl ${
+        className={`relative max-w-3xl rounded-3xl px-5 py-4 text-sm leading-relaxed shadow-xl transition-all duration-500 ${
           isUser
-            ? "bg-blue-600 text-white rounded-tr-none"
-            : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-none"
+            ? "w-fit bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white hover:shadow-[0_25px_45px_-20px_rgba(99,102,241,0.65)]"
+            : "bg-white/85 text-gray-800 backdrop-blur-xl hover:shadow-[0_25px_45px_-22px_rgba(59,130,246,0.45)] dark:bg-slate-800/85 dark:text-gray-100"
         }`}
       >
-        {isUser ? (
-          <div className="text-sm whitespace-pre-wrap break-words">
-            {message.content}
-          </div>
-        ) : (
-          <MarkdownRenderer content={message.content} />
-        )}
+        <div
+          className={`pointer-events-none absolute inset-px rounded-3xl border ${
+            isUser ? "border-white/30" : "border-white/40 dark:border-white/10"
+          } opacity-60`}
+        />
+        <div className="relative z-10">
+          {isUser ? (
+            <div className="text-sm whitespace-pre-wrap break-words">
+              {message.content}
+            </div>
+          ) : (
+            <MarkdownRenderer content={message.content} />
+          )}
+        </div>
       </div>
     </div>
   );
