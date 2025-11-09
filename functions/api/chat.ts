@@ -1,7 +1,3 @@
-export const config = {
-  runtime: "nodejs_esmsh",
-};
-
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -11,73 +7,86 @@ interface RequestBody {
   messages: Message[];
 }
 
-export default async (request: Request): Promise<Response> => {
-  // Only allow POST requests
-  if (request.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
+const ALLOWED_METHOD = "POST";
+const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+const DEFAULT_MODEL = "gpt-5-mini";
+const DEFAULT_TEMPERATURE = 0.7;
+const DEFAULT_MAX_TOKENS = 2000;
+
+export const onRequest = async ({ request, env }: { request: Request; env: Record<string, unknown> }) => {
+  if (request.method !== ALLOWED_METHOD) {
+    return new Response("Method Not Allowed", {
+      status: 405,
+      headers: { Allow: ALLOWED_METHOD },
+    });
   }
 
   try {
-    const body: RequestBody = await request.json();
-    const { messages } = body;
+    const body = (await request.json()) as RequestBody;
+    const { messages } = body ?? {};
 
-    if (!messages || !Array.isArray(messages)) {
+    if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(
-        JSON.stringify({ error: "Invalid request format" }),
+        JSON.stringify({ error: "Invalid request format: messages array required" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Get API key from environment variables
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = env.OPENAI_API_KEY as string | undefined;
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "API key not configured" }),
+        JSON.stringify({ error: "Missing OPENAI_API_KEY binding" }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Call OpenAI API
-    const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+    const openaiResponse = await fetch(OPENAI_ENDPOINT, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 2000,
+        model: DEFAULT_MODEL,
+        messages,
+        temperature: DEFAULT_TEMPERATURE,
+        max_tokens: DEFAULT_MAX_TOKENS,
       }),
     });
 
     if (!openaiResponse.ok) {
-      const error = await openaiResponse.json();
-      console.error("OpenAI API error:", error);
+      const errorPayload = await openaiResponse.json().catch(() => ({}));
+      console.error("OpenAI API error:", errorPayload);
+
       return new Response(
         JSON.stringify({
           error:
-            error.error?.message ||
-            "Failed to get response from OpenAI",
+            errorPayload?.error?.message ??
+            `OpenAI request failed with status ${openaiResponse.status}`,
         }),
-        { status: openaiResponse.status, headers: { "Content-Type": "application/json" } }
+        {
+          status: openaiResponse.status,
+          headers: { "Content-Type": "application/json" },
+        }
       );
     }
 
     const data = await openaiResponse.json();
-    const assistantMessage =
-      data.choices[0]?.message?.content || "No response generated";
+    const assistantMessage: string =
+      data?.choices?.[0]?.message?.content ?? "No response generated";
 
-    // Return the response
-    return new Response(assistantMessage, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-      },
-    });
+    return new Response(
+      JSON.stringify({
+        content: assistantMessage,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Chat function error:", error);
+
     return new Response(
       JSON.stringify({
         error:

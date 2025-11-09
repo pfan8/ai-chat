@@ -29,23 +29,13 @@ export async function sendChatMessage(
       throw new Error(error.error || "Failed to send message");
     }
 
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error("Failed to read response stream");
+    const data = (await response.json()) as ChatResponse;
+
+    if (!data?.content || typeof data.content !== "string") {
+      throw new Error("Invalid response format from chat API");
     }
 
-    let fullContent = "";
-    const decoder = new TextDecoder();
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value);
-      fullContent += chunk;
-    }
-
-    return fullContent;
+    return data.content;
   } catch (error) {
     console.error("Chat API error:", error);
     throw error;
