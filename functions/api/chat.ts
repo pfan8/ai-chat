@@ -9,7 +9,7 @@ interface RequestBody {
 
 const ALLOWED_METHOD = "POST";
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
-const DEFAULT_MODEL = "gpt-5-mini";
+const DEFAULT_MODEL = "gpt-4o";
 const DEFAULT_TEMPERATURE = 0.7;
 const DEFAULT_MAX_TOKENS = 2000;
 
@@ -40,6 +40,26 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
       );
     }
 
+    const model =
+      (env.OPENAI_MODEL as string | undefined) ?? DEFAULT_MODEL;
+    const temperature =
+      env.OPENAI_TEMPERATURE !== undefined
+        ? Number(env.OPENAI_TEMPERATURE)
+        : DEFAULT_TEMPERATURE;
+    const maxTokens =
+      env.OPENAI_MAX_TOKENS !== undefined
+        ? Number(env.OPENAI_MAX_TOKENS)
+        : DEFAULT_MAX_TOKENS;
+
+    if (Number.isNaN(temperature) || Number.isNaN(maxTokens)) {
+      return new Response(
+        JSON.stringify({
+          error: "Invalid OPENAI_TEMPERATURE or OPENAI_MAX_TOKENS value",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const openaiResponse = await fetch(OPENAI_ENDPOINT, {
       method: "POST",
       headers: {
@@ -47,10 +67,10 @@ export const onRequest = async ({ request, env }: { request: Request; env: Recor
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: DEFAULT_MODEL,
+        model,
         messages,
-        temperature: DEFAULT_TEMPERATURE,
-        max_tokens: DEFAULT_MAX_TOKENS,
+        temperature,
+        max_tokens: maxTokens,
       }),
     });
 
